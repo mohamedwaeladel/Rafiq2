@@ -40,27 +40,24 @@ interface ExpandedCourse extends Course {
   subject: string;
 }
 
-// Course Preview Modal Component - Fixed backdrop blur
-const CoursePreviewModal = ({ 
+interface CoursePreviewModalProps {
+  course: ExpandedCourse | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onModalExited: () => void;
+  onAddToMyCourses: (course: Course) => void;
+  isInMyCourses: boolean;
+}
+
+// Course Preview Modal Component - Fixed with proper React.FC typing
+const CoursePreviewModal: React.FC<CoursePreviewModalProps> = React.memo(({ 
   course, 
   isOpen, 
   onClose,
   onModalExited,
   onAddToMyCourses,
   isInMyCourses
-}: { 
-  course: ExpandedCourse | null; 
-  isOpen: boolean; 
-  onClose: () => void;
-  onModalExited: () => void;
-  onAddToMyCourses: (course: Course) => void;
-  isInMyCourses: boolean;
 }) => {
-  if (!course) return null;
-
-  const completedSessions = course.sessions.filter(s => s.completed).length;
-  const totalSessions = course.sessions.length;
-
   // Handle ESC key
   React.useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
@@ -80,28 +77,35 @@ const CoursePreviewModal = ({
     };
   }, [isOpen, onClose]);
 
-  const handleClose = (e: React.MouseEvent) => {
+  const handleClose = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     onClose();
-  };
+  }, [onClose]);
 
-  const handleBackgroundClick = (e: React.MouseEvent) => {
+  const handleBackgroundClick = React.useCallback((e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
-  };
+  }, [onClose]);
 
-  const handleAddToMyCourses = () => {
-    onAddToMyCourses({
-      id: course.id,
-      title: course.title,
-      thumbnail: course.thumbnail,
-      duration: course.duration,
-      progress: course.progress,
-      category: course.category
-    });
-  };
+  const handleAddToMyCourses = React.useCallback(() => {
+    if (course) {
+      onAddToMyCourses({
+        id: course.id,
+        title: course.title,
+        thumbnail: course.thumbnail,
+        duration: course.duration,
+        progress: course.progress,
+        category: course.category
+      });
+    }
+  }, [course, onAddToMyCourses]);
+
+  if (!course) return null;
+
+  const completedSessions = course.sessions.filter(s => s.completed).length;
+  const totalSessions = course.sessions.length;
 
   return (
     <AnimatePresence onExitComplete={onModalExited}>
@@ -381,23 +385,25 @@ const CoursePreviewModal = ({
       )}
     </AnimatePresence>
   );
-};
+});
+
+CoursePreviewModal.displayName = 'CoursePreviewModal';
 
 // Course Row Component
-const CourseRow = ({ 
+const CourseRow: React.FC<{
+  title: string;
+  courses: Course[];
+  showProgress?: boolean;
+  handleCourseClick: (course: Course) => void;
+  onAddToMyCourses: (course: Course) => void;
+  isInMyCourses: (courseId: string) => boolean;
+}> = React.memo(({ 
   title, 
   courses, 
   showProgress = false, 
   handleCourseClick,
   onAddToMyCourses,
   isInMyCourses
-}: { 
-  title: string; 
-  courses: Course[]; 
-  showProgress?: boolean;
-  handleCourseClick: (course: Course) => void;
-  onAddToMyCourses: (course: Course) => void;
-  isInMyCourses: (courseId: string) => boolean;
 }) => {
   return (
     <div className="space-y-4">
@@ -465,7 +471,9 @@ const CourseRow = ({
       </div>
     </div>
   );
-};
+});
+
+CourseRow.displayName = 'CourseRow';
 
 export const CoursesPage: React.FC<CoursesPageProps> = ({ onAddToMyCourses, isInMyCourses }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -473,21 +481,21 @@ export const CoursesPage: React.FC<CoursesPageProps> = ({ onAddToMyCourses, isIn
   const [selectedCourse, setSelectedCourse] = useState<ExpandedCourse | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleCourseClick = (course: Course) => {
+  const handleCourseClick = React.useCallback((course: Course) => {
     const expandedCourse = expandedCourses.find(c => c.id === course.id);
     if (expandedCourse) {
       setSelectedCourse(expandedCourse);
       setIsModalOpen(true);
     }
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = React.useCallback(() => {
     setIsModalOpen(false);
-  };
+  }, []);
 
-  const handleModalExited = () => {
+  const handleModalExited = React.useCallback(() => {
     setSelectedCourse(null);
-  };
+  }, []);
 
   const courses: Course[] = [
     {
